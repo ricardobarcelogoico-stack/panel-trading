@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panel de Trading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0e14;--panel:#121822;--panel-2:#1a2130;--line:#232c3d;--text:#e4e9f0;--muted:#7a8699;--green:#2ee6a0;--amber:#ffb547;--red:#ff5c6c;--accent:#4d9fff;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;padding:24px 16px 60px;background-image:radial-gradient(circle at 20% 0%,rgba(77,159,255,0.06),transparent 40%),radial-gradient(circle at 90% 10%,rgba(46,230,160,0.05),transparent 35%);min-height:100vh;}
+.wrap{max-width:1000px;margin:0 auto;}
+.top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px;flex-wrap:wrap;gap:10px;}
+.top h1{font-size:24px;font-weight:800;letter-spacing:-0.5px;}
+.top h1 span{color:var(--accent);}
+.top .ts{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+.seccion-titulo{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;letter-spacing:1.5px;color:var(--muted);margin:30px 0 16px;text-transform:uppercase;}
+.seccion-titulo:first-child{margin-top:0;}
+.dot{width:9px;height:9px;border-radius:50%;}
+.dot-val{background:var(--amber);} .dot-apex{background:var(--green);}
+.verdict{background:linear-gradient(135deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:16px;padding:22px 26px;margin-bottom:20px;display:flex;align-items:center;gap:20px;position:relative;overflow:hidden;}
+.light{width:48px;height:48px;border-radius:50%;flex-shrink:0;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.55}}
+.verdict-txt h3{font-size:19px;font-weight:700;} .verdict-txt p{color:var(--muted);font-size:13px;margin-top:3px;}
+.progress-block{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:20px;}
+.progress-block h4{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:15px;}
+.prog-row{margin-bottom:16px;} .prog-row:last-child{margin-bottom:0;}
+.prog-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:7px;}
+.prog-label span:last-child{font-family:'IBM Plex Mono',monospace;}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media (max-width:760px){.grid{grid-template-columns:1fr;} .top h1{font-size:20px;}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;}
+.card-apex{border-color:rgba(46,230,160,0.2);}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:15px;}
+.card-head h2{font-size:18px;font-weight:700;}
+.cuenta-tag{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+.ops-count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);background:var(--panel-2);padding:4px 10px;border-radius:20px;}
+.estado-badge{font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;letter-spacing:0.3px;}
+.pos-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+.pos-label{font-size:10px;letter-spacing:1px;color:var(--muted);background:var(--panel-2);padding:3px 8px;border-radius:4px;}
+.pos-chip{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent);background:rgba(77,159,255,0.1);padding:4px 10px;border-radius:6px;}
+.pos-none{font-size:13px;color:var(--muted);}
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:16px;}
+.metric{display:flex;flex-direction:column;gap:2px;}
+.metric-label{font-size:10px;letter-spacing:0.8px;color:var(--muted);}
+.metric-val{font-family:'IBM Plex Mono',monospace;font-size:23px;font-weight:600;}
+.metric-sub{font-size:11px;color:var(--muted);}
+.target-section{margin-bottom:16px;}
+.falta-txt{font-size:11px;color:var(--muted);margin-top:6px;display:block;}
+.dd-section{margin-bottom:13px;}
+.dd-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px;}
+.dd-label span:last-child{font-family:'IBM Plex Mono',monospace;}
+.bar-track{height:7px;background:var(--panel-2);border-radius:6px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:6px;transition:width 0.6s;}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+.badge{font-size:10px;letter-spacing:0.5px;padding:5px 10px;border-radius:6px;font-weight:600;}
+.badge-ok{background:rgba(46,230,160,0.12);color:var(--green);}
+.badge-bad{background:rgba(255,92,108,0.12);color:var(--red);}
+.apex-resumen{display:flex;gap:24px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 20px;margin-bottom:18px;font-size:13px;color:var(--muted);}
+.apex-resumen b{color:var(--text);font-family:'IBM Plex Mono',monospace;}
+.empty-apex{background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:30px;text-align:center;color:var(--muted);font-size:13px;line-height:1.7;}
+.footer{text-align:center;margin-top:34px;font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;line-height:1.7;}
+.footer b{color:var(--text);}
+.refresh-note{text-align:center;font-size:11px;color:var(--muted);margin-top:8px;}
+</style></head><body><div class="wrap">
+  <div class="top"><h1>Panel de Trading <span>· Apex</span></h1><div class="ts">Actualizado: 31 May 2026 · 05:07 PM</div></div>
+  
+    <div class="seccion-titulo"><span class="dot dot-val"></span>EN VALIDACION</div>
+    <div class="verdict">
+      <div class="light" style="background:var(--amber);box-shadow:0 0 24px var(--amber)"></div>
+      <div class="verdict-txt"><h3>ACUMULANDO DATOS</h3><p>Faltan 14 operaciones para concluir</p></div>
+    </div>
+    <div class="progress-block">
+      <h4>Progreso hacia la decision</h4>
+      <div class="prog-row"><div class="prog-label"><span>Operaciones acumuladas</span><span>1 / 15</span></div><div class="bar-track"><div class="bar-fill" style="width:6.666666666666667%;background:var(--accent)"></div></div></div>
+      <div class="prog-row"><div class="prog-label"><span>Win rate combinado</span><span>0.0% / 45% min</span></div><div class="bar-track"><div class="bar-fill" style="width:0%;background:var(--amber)"></div></div></div>
+      <div class="prog-row"><div class="prog-label"><span>Ganancia simulada combinada</span><span>$-408</span></div></div>
+    </div>
+    <div class="grid"><div class="card">
+      <div class="card-head"><h2>Fibonacci</h2><span class="ops-count">0 ops</span></div>
+      <div class="pos-row"><span class="pos-label">ABIERTA</span><span class="pos-none">Sin posicion</span></div>
+      <div class="metrics-grid">
+        <div class="metric"><span class="metric-label">WIN RATE</span><span class="metric-val" style="color:var(--amber)">0.0%</span><span class="metric-sub">0W / 0L</span></div>
+        <div class="metric"><span class="metric-label">PROFIT FACTOR</span><span class="metric-val">0.00</span><span class="metric-sub">perdedor</span></div>
+        <div class="metric"><span class="metric-label">GANANCIA SIM</span><span class="metric-val" style="color:var(--green)">$+0</span><span class="metric-sub">simulado</span></div>
+        <div class="metric"><span class="metric-label">PEOR DD</span><span class="metric-val" style="color:var(--green)">$0</span><span class="metric-sub">limite $4,000</span></div>
+      </div>
+      <div class="dd-section"><div class="dd-label"><span>Distancia al limite Apex DD</span><span>0%</span></div><div class="bar-track"><div class="bar-fill" style="width:0%;background:var(--green)"></div></div></div>
+      <div class="badges"><span class="badge badge-ok">CONSISTENCY OK</span><span class="badge badge-ok">DAILY LOSS OK</span></div>
+    </div><div class="card">
+      <div class="card-head"><h2>ORB</h2><span class="ops-count">1 ops</span></div>
+      <div class="pos-row"><span class="pos-label">ABIERTA</span><span class="pos-none">Sin posicion</span></div>
+      <div class="metrics-grid">
+        <div class="metric"><span class="metric-label">WIN RATE</span><span class="metric-val" style="color:var(--amber)">0.0%</span><span class="metric-sub">0W / 1L</span></div>
+        <div class="metric"><span class="metric-label">PROFIT FACTOR</span><span class="metric-val">0.00</span><span class="metric-sub">perdedor</span></div>
+        <div class="metric"><span class="metric-label">GANANCIA SIM</span><span class="metric-val" style="color:var(--red)">$-408</span><span class="metric-sub">simulado</span></div>
+        <div class="metric"><span class="metric-label">PEOR DD</span><span class="metric-val" style="color:var(--green)">$408</span><span class="metric-sub">limite $4,000</span></div>
+      </div>
+      <div class="dd-section"><div class="dd-label"><span>Distancia al limite Apex DD</span><span>10%</span></div><div class="bar-track"><div class="bar-fill" style="width:10.188949132595736%;background:var(--green)"></div></div></div>
+      <div class="badges"><span class="badge badge-ok">CONSISTENCY OK</span><span class="badge badge-ok">DAILY LOSS OK</span></div>
+    </div></div>
+  
+    <div class="seccion-titulo"><span class="dot dot-apex"></span>EN APEX REAL</div>
+    <div class="empty-apex">Todavia no hay cuentas Apex activas.<br>Cuando pases la validacion y arranques una cuenta, apareceran aqui automaticamente.</div>
+  <div class="footer">
+    Criterio de decision: <b>15+ operaciones</b> con <b>WR combinado ≥ 45%</b> = luz verde Apex<br>
+    Se actualiza automaticamente · Datos de validacion en vivo
+  </div>
+</div></body></html>
