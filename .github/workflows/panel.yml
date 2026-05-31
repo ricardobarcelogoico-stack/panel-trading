@@ -1,0 +1,28 @@
+name: Generar Panel
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'
+
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generar panel
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: python generar_panel.py
+      - name: Publicar
+        run: |
+          git config user.email "bot@trading.com"
+          git config user.name "Panel Bot"
+          git add index.html
+          git diff --staged --quiet || git commit -m "Panel actualizado $(date)"
+          git push || true
