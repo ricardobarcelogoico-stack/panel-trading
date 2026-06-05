@@ -16,10 +16,12 @@ TOKEN = os.environ.get("GH_TOKEN", "")
 #  CONFIGURACION DE BOTS — agrega aqui cualquier bot nuevo
 # ============================================================
 BOTS = [
-    {"nombre":"Fibonacci", "repo":"bot-validacion", "archivo":"estado_validacion.json",
-     "tipo":"multi", "fase":"validacion"},
     {"nombre":"ORB", "repo":"bot-orb", "archivo":"estado_orb.json",
      "tipo":"single", "fase":"validacion"},
+    {"nombre":"Fibonacci GLD", "repo":"fib-gld-bot", "archivo":"estado_fib_gld.json",
+     "tipo":"single", "fase":"validacion"},
+    {"nombre":"Fibonacci QQQ", "repo":"bot-validacion", "archivo":"estado_validacion.json",
+     "tipo":"multi", "fase":"validacion", "info":"referencia"},
     # === Cuando pases a Apex real, descomenta y ajusta: ===
     # {"nombre":"Fibonacci Apex", "repo":"apex-fib-1", "archivo":"estado_fib_gld.json",
     #  "tipo":"single", "fase":"apex", "cuenta":"150K EOD"},
