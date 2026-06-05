@@ -64,6 +64,7 @@ def extraer_trades(estado, tipo):
             "razon": t.get("razon", ""),
             "fecha": t.get("fecha", ""),
             "symbol": t.get("symbol", estado.get("symbol", "—")),
+            "posicion": t.get("posicion", ""),
         })
     return out
 
@@ -121,7 +122,7 @@ for b in BOTS:
     trades=extraer_trades(estado, b["tipo"])
     met=calc_metricas(trades)
     activas=posicion_abierta(estado, b["tipo"])
-    datos.append({**b, "met":met, "activas":activas, "estado":estado})
+    datos.append({**b, "met":met, "activas":activas, "estado":estado, "trades":trades})
     print(f"  {b['nombre']}: {met['ops']} ops, WR {met['wr']:.0f}%")
 
 val = [d for d in datos if d["fase"]=="validacion"]
@@ -139,11 +140,36 @@ if v_ops>=META_OPS:
 else:
     sem=("ambar","ACUMULANDO DATOS",f"Faltan {META_OPS-v_ops} operaciones para concluir")
 
+
+def tabla_trades(trades, bot_id):
+    if not trades: return ""
+    rows = ""
+    for i, t in enumerate(reversed(trades)):
+        num = len(trades) - i
+        gan = t["ganancia"]
+        gan_color = "#2ee6a0" if gan >= 0 else "#ff5c6c"
+        razon = t.get("razon", "")
+        if "Take" in razon or "TP" in razon: cierre,cierre_c = "TP ✅","#2ee6a0"
+        elif "Stop" in razon or "SL" in razon: cierre,cierre_c = "SL ❌","#ff5c6c"
+        else: cierre,cierre_c = "EOD 🕐","#7a8699"
+        pos = t.get("posicion","")
+        dir_icon = "▲" if pos=="LONG" else ("▼" if pos=="SHORT" else "—")
+        dir_color = "#2ee6a0" if pos=="LONG" else ("#ff5c6c" if pos=="SHORT" else "#7a8699")
+        fecha = t["fecha"][:10] if t.get("fecha") else "—"
+        rows += f'<tr><td style="color:#7a8699">{num}</td><td>{fecha}</td><td style="color:{dir_color}">{dir_icon} {pos}</td><td style="color:{cierre_c}">{cierre}</td><td style="color:{gan_color}">${gan:+,.0f}</td></tr>'
+    return f'''<div class="trades-toggle" onclick="toggleTrades(\'trades-{bot_id}\')" id="btn-trades-{bot_id}">Ver operaciones ▾</div>
+    <div class="trades-wrap" id="trades-{bot_id}" style="display:none">
+      <table class="trades-tbl">
+        <thead><tr><th>#</th><th>Fecha</th><th>Dir</th><th>Cierre</th><th>P&L</th></tr></thead>
+        <tbody>{rows}</tbody>
+      </table>
+    </div>'''
+
 def barra(pct,color):
     pct=max(0,min(100,pct))
     return f'<div class="bar-track"><div class="bar-fill" style="width:{pct}%;background:{color}"></div></div>'
 
-def card_validacion(d):
+def card_validacion(d, idx=0):
     m=d["met"]
     if d["activas"]:
         chips="".join(f'<span class="pos-chip">{a}</span>' for a in d["activas"])
@@ -156,6 +182,7 @@ def card_validacion(d):
     gan_c="var(--green)" if m["ganancia"]>=0 else "var(--red)"
     cb='<span class="badge badge-bad">VIOLA CONSISTENCY</span>' if m["viola_consist"] else '<span class="badge badge-ok">CONSISTENCY OK</span>'
     db='<span class="badge badge-bad">VIOLA DAILY</span>' if m["viola_daily"] else '<span class="badge badge-ok">DAILY LOSS OK</span>'
+    tbl = tabla_trades(d.get("trades",[]), f"{d['nombre'].replace(' ','-')}-{idx}")
     return f'''<div class="card">
       <div class="card-head"><h2>{d["nombre"]}</h2><span class="ops-count">{m["ops"]} ops</span></div>
       {pos}
@@ -167,6 +194,7 @@ def card_validacion(d):
       </div>
       <div class="dd-section"><div class="dd-label"><span>Distancia al limite Apex DD</span><span>{dd_pct:.0f}%</span></div>{barra(dd_pct,dd_c)}</div>
       <div class="badges">{cb}{db}</div>
+      {tbl}
     </div>'''
 
 def card_apex(d):
@@ -209,7 +237,7 @@ sem_color={"verde":"var(--green)","ambar":"var(--amber)","rojo":"var(--red)"}[se
 # Seccion validacion
 seccion_val=""
 if val:
-    cards_val="".join(card_validacion(d) for d in val)
+    cards_val="".join(card_validacion(d, i) for i, d in enumerate(val))
     seccion_val=f'''
     <div class="seccion-titulo"><span class="dot dot-val"></span>EN VALIDACION</div>
     <div class="verdict">
@@ -314,7 +342,20 @@ body{{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;paddi
     Criterio de decision: <b>{META_OPS}+ operaciones</b> con <b>WR combinado ≥ {META_WR}%</b> = luz verde Apex<br>
     Se actualiza automaticamente · Datos de validacion en vivo
   </div>
-</div></body></html>'''
+</div><script>
+function toggleTrades(id) {
+  var wrap = document.getElementById(id);
+  var btn = document.getElementById('btn-' + id);
+  if (wrap.style.display === 'none') {
+    wrap.style.display = 'block';
+    btn.innerHTML = 'Ocultar operaciones ▴';
+  } else {
+    wrap.style.display = 'none';
+    btn.innerHTML = 'Ver operaciones ▾';
+  }
+}
+</script>
+</body></html>'''
 
 with open("index.html","w") as f:
     f.write(html)
