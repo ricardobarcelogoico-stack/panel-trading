@@ -343,17 +343,17 @@ body{{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;paddi
     Se actualiza automaticamente · Datos de validacion en vivo
   </div>
 </div><script>
-function toggleTrades(id) {
+function toggleTrades(id) {{
   var wrap = document.getElementById(id);
   var btn = document.getElementById('btn-' + id);
-  if (wrap.style.display === 'none') {
+  if (wrap.style.display === 'none') {{
     wrap.style.display = 'block';
     btn.innerHTML = 'Ocultar operaciones ▴';
-  } else {
+  }} else {{
     wrap.style.display = 'none';
     btn.innerHTML = 'Ver operaciones ▾';
-  }
-}
+  }}
+}}
 </script>
 </body></html>'''
 
