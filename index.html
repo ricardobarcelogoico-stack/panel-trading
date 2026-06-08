@@ -62,18 +62,21 @@ body{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;paddin
 .footer b{color:var(--text);}
 .refresh-note{text-align:center;font-size:11px;color:var(--muted);margin-top:8px;}
 </style></head><body><div class="wrap">
-  <div class="top"><h1>Panel de Trading <span>· Apex</span></h1><div class="ts">Actualizado: 08 Jun 2026 · 08:00 PM</div></div>
+  <div class="top"><h1>Panel de Trading <span>· Apex</span></h1><div class="ts">Actualizado: 08 Jun 2026 · 08:49 PM</div></div>
   
     <div class="seccion-titulo"><span class="dot dot-val"></span>EN VALIDACION</div>
     <div class="verdict">
       <div class="light" style="background:var(--amber);box-shadow:0 0 24px var(--amber)"></div>
-      <div class="verdict-txt"><h3>ACUMULANDO DATOS</h3><p>Faltan 7 operaciones para concluir</p></div>
+      <div class="verdict-txt"><h3>FASE 1 — BOT SOLO</h3><p>ORB: 7/33 ops sin Claude</p></div>
     </div>
     <div class="progress-block">
       <h4>Progreso hacia la decision</h4>
-      <div class="prog-row"><div class="prog-label"><span>Operaciones acumuladas</span><span>8 / 15</span></div><div class="bar-track"><div class="bar-fill" style="width:53.333333333333336%;background:var(--accent)"></div></div></div>
-      <div class="prog-row"><div class="prog-label"><span>Win rate combinado</span><span>50.0% / 45% min</span></div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--green)"></div></div></div>
-      <div class="prog-row"><div class="prog-label"><span>Ganancia simulada combinada</span><span>$+600</span></div></div>
+      <div class="prog-row"><div class="prog-label"><span>ORB — Fase 1: Bot solo (meta 33)</span><span>7/33</span></div><div class="bar-track"><div class="bar-fill" style="width:21.21212121212121%;background:var(--accent)"></div></div></div>
+      <div class="prog-row"><div class="prog-label"><span>ORB — Fase 2: Bot + Claude (meta 66)</span><span>0/33</span></div><div class="bar-track"><div class="bar-fill" style="width:0%;background:var(--green)"></div></div></div>
+      <div class="prog-row"><div class="prog-label"><span>ORB — Fase 3: Refinamiento (meta 100)</span><span>0/34</span></div><div class="bar-track"><div class="bar-fill" style="width:0%;background:var(--green)"></div></div></div>
+      <div class="prog-row"><div class="prog-label"><span>Fibonacci GLD (meta 50)</span><span>0/50</span></div><div class="bar-track"><div class="bar-fill" style="width:0%;background:var(--accent)"></div></div></div>
+      <div class="prog-row"><div class="prog-label"><span>WR ORB</span><span>42.9% / 45% min</span></div><div class="bar-track"><div class="bar-fill" style="width:95.23809523809523%;background:var(--amber)"></div></div></div>
+      <div class="prog-row"><div class="prog-label"><span>Ganancia ORB sim</span><span>$-249</span></div></div>
     </div>
     <div class="grid"><div class="card">
       <div class="card-head"><h2>ORB</h2><span class="ops-count">7 ops</span></div>
@@ -128,7 +131,7 @@ body{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;paddin
     <div class="seccion-titulo"><span class="dot dot-apex"></span>EN APEX REAL</div>
     <div class="empty-apex">Todavia no hay cuentas Apex activas.<br>Cuando pases la validacion y arranques una cuenta, apareceran aqui automaticamente.</div>
   <div class="footer">
-    Criterio de decision: <b>15+ operaciones</b> con <b>WR combinado ≥ 45%</b> = luz verde Apex<br>
+    Criterio de decision: <b>100+ operaciones</b> con <b>WR combinado ≥ 45%</b> = luz verde Apex<br>
     Se actualiza automaticamente · Datos de validacion en vivo
   </div>
 </div><script>
