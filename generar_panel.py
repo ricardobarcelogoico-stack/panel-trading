@@ -34,7 +34,9 @@ APEX_DD = 4000
 APEX_DAILY = 2000
 APEX_CONSISTENCY = 4500
 APEX_TARGET = 9000
-META_OPS = 15
+META_OPS_ORB = 100
+META_OPS_FIB = 50
+META_OPS = 100
 META_WR = 45
 
 def fetch_estado(repo, archivo):
@@ -134,11 +136,25 @@ v_wins=sum(d["met"]["wins"] for d in val)
 v_wr=v_wins/v_ops*100 if v_ops>0 else 0
 v_gan=sum(d["met"]["ganancia"] for d in val)
 
-if v_ops>=META_OPS:
-    if v_wr>=META_WR: sem=("verde","LUZ VERDE PARA APEX","El edge se sostiene en vivo")
-    else: sem=("rojo","POSIBLE OVERFITTING",f"WR {v_wr:.0f}% bajo el minimo de {META_WR}%")
+d_orb     = next((d for d in val if d["nombre"]=="ORB"), None)
+d_fib_gld = next((d for d in val if d["nombre"]=="Fibonacci GLD"), None)
+orb_ops   = d_orb["met"]["ops"] if d_orb else 0
+orb_wins  = d_orb["met"]["wins"] if d_orb else 0
+orb_wr    = orb_wins/orb_ops*100 if orb_ops>0 else 0
+orb_gan   = d_orb["met"]["ganancia"] if d_orb else 0
+fib_ops   = d_fib_gld["met"]["ops"] if d_fib_gld else 0
+fib_wins  = d_fib_gld["met"]["wins"] if d_fib_gld else 0
+fib_wr    = fib_wins/fib_ops*100 if fib_ops>0 else 0
+fib_gan   = d_fib_gld["met"]["ganancia"] if d_fib_gld else 0
+if orb_ops < 33:
+    sem=("ambar",f"FASE 1 — BOT SOLO",f"ORB: {orb_ops}/33 ops sin Claude")
+elif orb_ops < 66:
+    sem=("ambar",f"FASE 2 — BOT + CLAUDE",f"ORB: {orb_ops}/66 ops con Claude activo")
+elif orb_ops < META_OPS_ORB:
+    sem=("ambar",f"FASE 3 — REFINAMIENTO",f"ORB: {orb_ops}/100 ops")
 else:
-    sem=("ambar","ACUMULANDO DATOS",f"Faltan {META_OPS-v_ops} operaciones para concluir")
+    if orb_wr>=META_WR: sem=("verde","LUZ VERDE PARA APEX","100 ops ORB — edge validado")
+    else: sem=("rojo","POSIBLE OVERFITTING",f"WR {orb_wr:.0f}% bajo el minimo 45%")
 
 
 def tabla_trades(trades, bot_id):
@@ -246,9 +262,12 @@ if val:
     </div>
     <div class="progress-block">
       <h4>Progreso hacia la decision</h4>
-      <div class="prog-row"><div class="prog-label"><span>Operaciones acumuladas</span><span>{v_ops} / {META_OPS}</span></div>{barra(v_ops/META_OPS*100,'var(--accent)')}</div>
-      <div class="prog-row"><div class="prog-label"><span>Win rate combinado</span><span>{v_wr:.1f}% / {META_WR}% min</span></div>{barra(v_wr/META_WR*100 if META_WR else 0,'var(--green)' if v_wr>=META_WR else 'var(--amber)')}</div>
-      <div class="prog-row"><div class="prog-label"><span>Ganancia simulada combinada</span><span>${v_gan:+,.0f}</span></div></div>
+      <div class="prog-row"><div class="prog-label"><span>ORB — Fase 1: Bot solo (meta 33)</span><span>{min(orb_ops,33)}/33</span></div>{barra(min(orb_ops,33)/33*100,'var(--accent)')}</div>
+      <div class="prog-row"><div class="prog-label"><span>ORB — Fase 2: Bot + Claude (meta 66)</span><span>{max(0,min(orb_ops-33,33))}/33</span></div>{barra(max(0,min(orb_ops-33,33))/33*100,'var(--green)')}</div>
+      <div class="prog-row"><div class="prog-label"><span>ORB — Fase 3: Refinamiento (meta 100)</span><span>{max(0,orb_ops-66)}/34</span></div>{barra(max(0,orb_ops-66)/34*100,'var(--green)')}</div>
+      <div class="prog-row"><div class="prog-label"><span>Fibonacci GLD (meta 50)</span><span>{fib_ops}/50</span></div>{barra(fib_ops/50*100,'var(--accent)')}</div>
+      <div class="prog-row"><div class="prog-label"><span>WR ORB</span><span>{orb_wr:.1f}% / 45% min</span></div>{barra(orb_wr/45*100 if orb_wr else 0,'var(--green)' if orb_wr>=45 else 'var(--amber)')}</div>
+      <div class="prog-row"><div class="prog-label"><span>Ganancia ORB sim</span><span>${orb_gan:+,.0f}</span></div></div>
     </div>
     <div class="grid">{cards_val}</div>'''
 
