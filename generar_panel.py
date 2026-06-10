@@ -116,6 +116,30 @@ def estado_cuenta_apex(met, estado):
         return ("quemada", "🔴 QUEMADA")
     return ("activa", "🟢 ACTIVA")
 
+
+def push_html_a_github():
+    import base64, json as _json
+    token = TOKEN
+    if not token: print("Sin GH_TOKEN"); return
+    with open("index.html","rb") as f: html = f.read()
+    html_b64 = base64.b64encode(html).decode()
+    url = f"https://api.github.com/repos/{OWNER}/panel-trading/contents/index.html"
+    req = urllib.request.Request(url)
+    req.add_header("Authorization", f"Bearer {token}")
+    req.add_header("Accept","application/vnd.github+json")
+    try:
+        with urllib.request.urlopen(req) as r: sha = _json.load(r)["sha"]
+    except: sha = None
+    payload = {"message":f"Panel {datetime.now().strftime('%Y-%m-%d %H:%M')}","content":html_b64,"branch":"main"}
+    if sha: payload["sha"] = sha
+    req2 = urllib.request.Request(url, data=_json.dumps(payload).encode(), method="PUT")
+    req2.add_header("Authorization",f"Bearer {token}")
+    req2.add_header("Accept","application/vnd.github+json")
+    req2.add_header("Content-Type","application/json")
+    try:
+        with urllib.request.urlopen(req2): print("Panel publicado en GitHub Pages")
+    except Exception as e: print(f"Error: {e}")
+
 # ============ RECOLECTAR ============
 print("Leyendo estados de los bots...")
 datos=[]
@@ -379,3 +403,4 @@ function toggleTrades(id) {{
 with open("index.html","w") as f:
     f.write(html)
 print("\nindex.html generado correctamente")
+push_html_a_github()
