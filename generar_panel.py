@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Generador de panel de trading para GitHub Pages.
-Corre en GitHub Actions: lee los estados de los bots via API de GitHub
-(funciona con repos privados usando el token) y genera index.html.
+Dashboard de Trading completo para GitHub Pages.
+Corre en Railway: lee estados de los 5 bots + memoria de Claude via API de GitHub
+(repos privados con token) y genera + publica index.html.
 
+Estilo: terminal de trading oscuro. Todo en una vista.
 Escalable: agrega bots a la lista BOTS y aparecen automaticamente.
 """
 import urllib.request, json, base64, os
@@ -17,54 +19,47 @@ TOKEN = os.environ.get("GH_TOKEN", "")
 # ============================================================
 BOTS = [
     {"nombre":"ORB", "repo":"bot-orb", "archivo":"estado_orb.json",
-     "tipo":"single", "fase":"validacion"},
+     "tipo":"single", "mercado":"QQQ → MNQ", "meta_ops":100, "color":"#4d9fff"},
     {"nombre":"Fibonacci GLD", "repo":"fib-gld-bot", "archivo":"estado_fib_gld.json",
-     "tipo":"single", "fase":"validacion"},
-    {"nombre":"Fibonacci QQQ", "repo":"bot-validacion", "archivo":"estado_validacion.json",
-     "tipo":"multi", "fase":"validacion", "info":"referencia"},
-    # === Cuando pases a Apex real, descomenta y ajusta: ===
-    # {"nombre":"Fibonacci Apex", "repo":"apex-fib-1", "archivo":"estado_fib_gld.json",
-    #  "tipo":"single", "fase":"apex", "cuenta":"150K EOD"},
-    # {"nombre":"ORB Apex", "repo":"apex-orb-1", "archivo":"estado_orb.json",
-    #  "tipo":"single", "fase":"apex", "cuenta":"150K EOD"},
+     "tipo":"single", "mercado":"GLD → MGC", "meta_ops":50, "color":"#ffb547"},
+    {"nombre":"VWAP Bounce", "repo":"bot-vwap-bounce", "archivo":"estado_vwap.json",
+     "tipo":"single", "mercado":"QQQ", "meta_ops":50, "color":"#2ee6a0"},
+    {"nombre":"RSI(2) Connors", "repo":"bot-rsi2-spy", "archivo":"estado_rsi2.json",
+     "tipo":"single", "mercado":"SPY", "meta_ops":50, "color":"#c98bff"},
+    {"nombre":"Asian Range", "repo":"bot-asian-range", "archivo":"estado_asian.json",
+     "tipo":"single", "mercado":"EUR/USD", "meta_ops":50, "color":"#ff8fa3"},
+    {"nombre":"Validacion Multi", "repo":"bot-validacion", "archivo":"estado_validacion.json",
+     "tipo":"multi", "mercado":"varios", "meta_ops":50, "color":"#7a8699", "info":"referencia"},
 ]
 
 CAPITAL = 150000
 APEX_DD = 4000
-APEX_DAILY = 2000
-APEX_CONSISTENCY = 4500
-APEX_TARGET = 9000
-META_OPS_ORB = 100
-META_OPS_FIB = 50
-META_OPS = 100
 META_WR = 45
 
-def fetch_estado(repo, archivo):
-    """Lee un archivo de estado de un repo via API de GitHub."""
+# ============================================================
+#  LECTURA DE DATOS
+# ============================================================
+def fetch_json(repo, archivo):
     url = f"https://api.github.com/repos/{OWNER}/{repo}/contents/{archivo}"
     req = urllib.request.Request(url)
-    if TOKEN:
-        req.add_header("Authorization", f"Bearer {TOKEN}")
+    if TOKEN: req.add_header("Authorization", f"Bearer {TOKEN}")
     req.add_header("Accept", "application/vnd.github+json")
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
             data = json.load(r)
-        contenido = base64.b64decode(data["content"]).decode()
-        return json.loads(contenido)
+        return json.loads(base64.b64decode(data["content"]).decode())
     except Exception as e:
         print(f"  No se pudo leer {repo}/{archivo}: {e}")
         return None
 
 def extraer_trades(estado, tipo):
     if estado is None: return []
-    hist = estado.get("historial_global", []) if tipo == "multi" else estado.get("historial", [])
+    hist = estado.get("historial_global", []) if tipo=="multi" else estado.get("historial", [])
     out = []
     for t in hist:
         out.append({
-            "ganancia": t.get("ganancia", 0),
-            "retorno": t.get("retorno", 0),
-            "razon": t.get("razon", ""),
-            "fecha": t.get("fecha", ""),
+            "ganancia": t.get("ganancia", 0), "retorno": t.get("retorno", 0),
+            "razon": t.get("razon", ""), "fecha": t.get("fecha", ""),
             "symbol": t.get("symbol", estado.get("symbol", "—")),
             "posicion": t.get("posicion", ""),
         })
@@ -73,28 +68,28 @@ def extraer_trades(estado, tipo):
 def calc_metricas(trades):
     if not trades:
         return {"ops":0,"wr":0,"pf":0,"ganancia":0,"max_dd":0,"wins":0,"losses":0,
-                "mejor_dia":0,"peor_dia":0,"viola_consist":False,"viola_daily":False}
+                "equity":[CAPITAL],"racha":0,"racha_tipo":""}
     rets=[t["retorno"] for t in trades]; gans=[t["ganancia"] for t in trades]
     wins=[r for r in rets if r>0]; losses=[r for r in rets if r<0]
     wr=len(wins)/len(rets)*100 if rets else 0
     suma_w=sum(g for g in gans if g>0); suma_l=abs(sum(g for g in gans if g<0))
     pf=suma_w/(suma_l+1e-10) if suma_l>0 else (99 if suma_w>0 else 0)
     ganancia=sum(gans)
-    eq=CAPITAL; peak=CAPITAL; mdd=0
+    eq=CAPITAL; peak=CAPITAL; mdd=0; curve=[CAPITAL]
     for g in gans:
-        eq+=g
+        eq+=g; curve.append(eq)
         if eq>peak: peak=eq
         if peak-eq>mdd: mdd=peak-eq
-    dias={}
-    for t in trades:
-        d=t["fecha"][:10] if t["fecha"] else "?"
-        dias[d]=dias.get(d,0)+t["ganancia"]
-    mejor=max(dias.values()) if dias else 0
-    peor=min(dias.values()) if dias else 0
+    # Racha actual
+    racha=0; racha_tipo=""
+    for g in reversed(gans):
+        tipo_g = "W" if g>0 else "L"
+        if racha==0: racha_tipo=tipo_g; racha=1
+        elif tipo_g==racha_tipo: racha+=1
+        else: break
     return {"ops":len(trades),"wr":wr,"pf":pf,"ganancia":ganancia,"max_dd":mdd,
-            "wins":len(wins),"losses":len(losses),"mejor_dia":mejor,"peor_dia":peor,
-            "viola_consist":mejor>=APEX_CONSISTENCY,
-            "viola_daily":abs(peor)>=APEX_DAILY if peor<0 else False}
+            "wins":len(wins),"losses":len(losses),"equity":curve,
+            "racha":racha,"racha_tipo":racha_tipo}
 
 def posicion_abierta(estado, tipo):
     if estado is None: return []
@@ -105,302 +100,346 @@ def posicion_abierta(estado, tipo):
                 activas.append(f"{sym} {inst['posicion']} @ ${inst.get('precio_entrada',0):,.2f}")
     else:
         if estado.get("posicion"):
-            activas.append(f"{estado.get('symbol','—')} {estado['posicion']} @ ${estado.get('precio_entrada',0):,.2f}")
+            sym = estado.get("symbol","—")
+            pe = estado.get("precio_entrada",0)
+            fmt = f"{pe:.5f}" if pe<10 else f"${pe:,.2f}"
+            activas.append(f"{estado['posicion']} @ {fmt}")
     return activas
 
-def estado_cuenta_apex(met, estado):
-    """Determina el estado de una cuenta Apex real."""
-    if estado and estado.get("eval_pasada"):
-        return ("pasada", "🎉 PASADA")
-    if met["max_dd"] >= APEX_DD:
-        return ("quemada", "🔴 QUEMADA")
-    return ("activa", "🟢 ACTIVA")
+# ============================================================
+#  ANALISIS DE CLAUDE
+# ============================================================
+def cargar_claude():
+    mem = fetch_json("claude-brain", "memoria.json")
+    pat = fetch_json("claude-brain", "patrones.json")
+    return mem if mem else [], pat if pat else {}
 
-
-def push_html_a_github():
-    import base64, json as _json
-    token = TOKEN
-    if not token: print("Sin GH_TOKEN"); return
-    with open("index.html","rb") as f: html = f.read()
-    html_b64 = base64.b64encode(html).decode()
-    url = f"https://api.github.com/repos/{OWNER}/panel-trading/contents/index.html"
-    req = urllib.request.Request(url)
-    req.add_header("Authorization", f"Bearer {token}")
-    req.add_header("Accept","application/vnd.github+json")
-    try:
-        with urllib.request.urlopen(req) as r: sha = _json.load(r)["sha"]
-    except: sha = None
-    payload = {"message":f"Panel {datetime.now().strftime('%Y-%m-%d %H:%M')}","content":html_b64,"branch":"main"}
-    if sha: payload["sha"] = sha
-    req2 = urllib.request.Request(url, data=_json.dumps(payload).encode(), method="PUT")
-    req2.add_header("Authorization",f"Bearer {token}")
-    req2.add_header("Accept","application/vnd.github+json")
-    req2.add_header("Content-Type","application/json")
-    try:
-        with urllib.request.urlopen(req2): print("Panel publicado en GitHub Pages")
-    except Exception as e: print(f"Error: {e}")
-
-# ============ RECOLECTAR ============
-print("Leyendo estados de los bots...")
-datos=[]
-for b in BOTS:
-    estado=fetch_estado(b["repo"], b["archivo"])
-    trades=extraer_trades(estado, b["tipo"])
-    met=calc_metricas(trades)
-    activas=posicion_abierta(estado, b["tipo"])
-    datos.append({**b, "met":met, "activas":activas, "estado":estado, "trades":trades})
-    print(f"  {b['nombre']}: {met['ops']} ops, WR {met['wr']:.0f}%")
-
-val = [d for d in datos if d["fase"]=="validacion"]
-apex = [d for d in datos if d["fase"]=="apex"]
-
-# Combinado validacion
-v_ops=sum(d["met"]["ops"] for d in val)
-v_wins=sum(d["met"]["wins"] for d in val)
-v_wr=v_wins/v_ops*100 if v_ops>0 else 0
-v_gan=sum(d["met"]["ganancia"] for d in val)
-
-d_orb     = next((d for d in val if d["nombre"]=="ORB"), None)
-d_fib_gld = next((d for d in val if d["nombre"]=="Fibonacci GLD"), None)
-orb_ops   = d_orb["met"]["ops"] if d_orb else 0
-orb_wins  = d_orb["met"]["wins"] if d_orb else 0
-orb_wr    = orb_wins/orb_ops*100 if orb_ops>0 else 0
-orb_gan   = d_orb["met"]["ganancia"] if d_orb else 0
-fib_ops   = d_fib_gld["met"]["ops"] if d_fib_gld else 0
-fib_wins  = d_fib_gld["met"]["wins"] if d_fib_gld else 0
-fib_wr    = fib_wins/fib_ops*100 if fib_ops>0 else 0
-fib_gan   = d_fib_gld["met"]["ganancia"] if d_fib_gld else 0
-if orb_ops < 33:
-    sem=("ambar",f"FASE 1 — BOT SOLO",f"ORB: {orb_ops}/33 ops sin Claude")
-elif orb_ops < 66:
-    sem=("ambar",f"FASE 2 — BOT + CLAUDE",f"ORB: {orb_ops}/66 ops con Claude activo")
-elif orb_ops < META_OPS_ORB:
-    sem=("ambar",f"FASE 3 — REFINAMIENTO",f"ORB: {orb_ops}/100 ops")
-else:
-    if orb_wr>=META_WR: sem=("verde","LUZ VERDE PARA APEX","100 ops ORB — edge validado")
-    else: sem=("rojo","POSIBLE OVERFITTING",f"WR {orb_wr:.0f}% bajo el minimo 45%")
-
-
-def tabla_trades(trades, bot_id):
-    if not trades: return ""
-    rows = ""
-    for i, t in enumerate(reversed(trades)):
-        num = len(trades) - i
-        gan = t["ganancia"]
-        gan_color = "#2ee6a0" if gan >= 0 else "#ff5c6c"
-        razon = t.get("razon", "")
-        if "Take" in razon or "TP" in razon: cierre,cierre_c = "TP ✅","#2ee6a0"
-        elif "Stop" in razon or "SL" in razon: cierre,cierre_c = "SL ❌","#ff5c6c"
-        else: cierre,cierre_c = "EOD 🕐","#7a8699"
-        pos = t.get("posicion","")
-        dir_icon = "▲" if pos=="LONG" else ("▼" if pos=="SHORT" else "—")
-        dir_color = "#2ee6a0" if pos=="LONG" else ("#ff5c6c" if pos=="SHORT" else "#7a8699")
-        fecha = t["fecha"][:10] if t.get("fecha") else "—"
-        rows += f'<tr><td style="color:#7a8699">{num}</td><td>{fecha}</td><td style="color:{dir_color}">{dir_icon} {pos}</td><td style="color:{cierre_c}">{cierre}</td><td style="color:{gan_color}">${gan:+,.0f}</td></tr>'
-    return f'''<div class="trades-toggle" onclick="toggleTrades(\'trades-{bot_id}\')" id="btn-trades-{bot_id}">Ver operaciones ▾</div>
-    <div class="trades-wrap" id="trades-{bot_id}" style="display:none">
-      <table class="trades-tbl">
-        <thead><tr><th>#</th><th>Fecha</th><th>Dir</th><th>Cierre</th><th>P&L</th></tr></thead>
-        <tbody>{rows}</tbody>
-      </table>
-    </div>'''
+# ============================================================
+#  COMPONENTES VISUALES
+# ============================================================
+def sparkline(equity, color, w=260, h=48):
+    """Genera un SVG sparkline de la equity curve."""
+    if len(equity) < 2:
+        return f'<svg width="{w}" height="{h}"></svg>'
+    lo, hi = min(equity), max(equity)
+    rng = hi-lo if hi>lo else 1
+    pts = []
+    for i,v in enumerate(equity):
+        x = i/(len(equity)-1)*w
+        y = h - (v-lo)/rng*(h-6) - 3
+        pts.append(f"{x:.1f},{y:.1f}")
+    path = "M" + " L".join(pts)
+    fill_pts = pts + [f"{w},{h}", f"0,{h}"]
+    fill = "M" + " L".join(fill_pts) + " Z"
+    final_up = equity[-1] >= equity[0]
+    c = color if final_up else "#ff5c6c"
+    return f'''<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" preserveAspectRatio="none">
+      <defs><linearGradient id="g{id(equity)}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="{c}" stop-opacity="0.25"/>
+        <stop offset="100%" stop-color="{c}" stop-opacity="0"/></linearGradient></defs>
+      <path d="{fill}" fill="url(#g{id(equity)})"/>
+      <path d="{path}" fill="none" stroke="{c}" stroke-width="2" stroke-linejoin="round"/>
+    </svg>'''
 
 def barra(pct,color):
     pct=max(0,min(100,pct))
     return f'<div class="bar-track"><div class="bar-fill" style="width:{pct}%;background:{color}"></div></div>'
 
-def card_validacion(d, idx=0):
-    m=d["met"]
+def tabla_trades(trades, bot_id):
+    if not trades: return ""
+    rows = ""
+    for i, t in enumerate(reversed(trades[-20:])):
+        num = len(trades) - i
+        gan = t["ganancia"]
+        gc = "#2ee6a0" if gan>=0 else "#ff5c6c"
+        razon = t.get("razon","")
+        if "Take" in razon or "TP" in razon: ci,cc="TP ✅","#2ee6a0"
+        elif "Stop" in razon or "SL" in razon or "Guardrail" in razon: ci,cc="SL ❌","#ff5c6c"
+        else: ci,cc="EOD 🕐","#7a8699"
+        pos=t.get("posicion","")
+        di="▲" if pos=="LONG" else ("▼" if pos=="SHORT" else "—")
+        dc="#2ee6a0" if pos=="LONG" else ("#ff5c6c" if pos=="SHORT" else "#7a8699")
+        fecha=t["fecha"][:10] if t.get("fecha") else "—"
+        rows+=f'<tr><td style="color:#7a8699">{num}</td><td>{fecha}</td><td style="color:{dc}">{di} {pos}</td><td style="color:{cc}">{ci}</td><td style="color:{gc};text-align:right">${gan:+,.0f}</td></tr>'
+    return f'''<div class="trades-toggle" onclick="tg('tr-{bot_id}')" id="btn-tr-{bot_id}">Ver operaciones ▾</div>
+    <div class="trades-wrap" id="tr-{bot_id}" style="display:none">
+      <table class="trades-tbl"><thead><tr><th>#</th><th>Fecha</th><th>Dir</th><th>Cierre</th><th style="text-align:right">P&L</th></tr></thead>
+      <tbody>{rows}</tbody></table></div>'''
+
+def card_bot(d, idx):
+    m=d["met"]; color=d["color"]
+    es_ref = d.get("info")=="referencia"
+    # Posicion
     if d["activas"]:
         chips="".join(f'<span class="pos-chip">{a}</span>' for a in d["activas"])
-        pos=f'<div class="pos-row"><span class="pos-label">ABIERTA</span>{chips}</div>'
+        pos=f'<div class="pos-row"><span class="pos-label">● ABIERTA</span>{chips}</div>'
     else:
-        pos='<div class="pos-row"><span class="pos-label">ABIERTA</span><span class="pos-none">Sin posicion</span></div>'
-    dd_pct=m["max_dd"]/APEX_DD*100
-    dd_c="var(--green)" if dd_pct<60 else ("var(--amber)" if dd_pct<90 else "var(--red)")
-    wr_c="var(--green)" if m["wr"]>=META_WR else "var(--amber)"
+        pos='<div class="pos-row"><span class="pos-label">○ FLAT</span><span class="pos-none">Sin posicion</span></div>'
+    wr_c="var(--green)" if m["wr"]>=META_WR else ("var(--amber)" if m["wr"]>=35 else "var(--red)")
     gan_c="var(--green)" if m["ganancia"]>=0 else "var(--red)"
-    cb='<span class="badge badge-bad">VIOLA CONSISTENCY</span>' if m["viola_consist"] else '<span class="badge badge-ok">CONSISTENCY OK</span>'
-    db='<span class="badge badge-bad">VIOLA DAILY</span>' if m["viola_daily"] else '<span class="badge badge-ok">DAILY LOSS OK</span>'
-    tbl = tabla_trades(d.get("trades",[]), f"{d['nombre'].replace(' ','-')}-{idx}")
-    return f'''<div class="card">
-      <div class="card-head"><h2>{d["nombre"]}</h2><span class="ops-count">{m["ops"]} ops</span></div>
-      {pos}
-      <div class="metrics-grid">
-        <div class="metric"><span class="metric-label">WIN RATE</span><span class="metric-val" style="color:{wr_c}">{m["wr"]:.1f}%</span><span class="metric-sub">{m["wins"]}W / {m["losses"]}L</span></div>
-        <div class="metric"><span class="metric-label">PROFIT FACTOR</span><span class="metric-val">{m["pf"]:.2f}</span><span class="metric-sub">{'rentable' if m["pf"]>1 else 'perdedor'}</span></div>
-        <div class="metric"><span class="metric-label">GANANCIA SIM</span><span class="metric-val" style="color:{gan_c}">${m["ganancia"]:+,.0f}</span><span class="metric-sub">simulado</span></div>
-        <div class="metric"><span class="metric-label">PEOR DD</span><span class="metric-val" style="color:{dd_c}">${m["max_dd"]:,.0f}</span><span class="metric-sub">limite ${APEX_DD:,}</span></div>
+    pf_c="var(--green)" if m["pf"]>1 else "var(--red)"
+    # Racha
+    if m["racha"]>0:
+        rc = "var(--green)" if m["racha_tipo"]=="W" else "var(--red)"
+        racha_html=f'<span class="racha" style="color:{rc}">{m["racha"]}{m["racha_tipo"]} seguidas</span>'
+    else:
+        racha_html='<span class="racha" style="color:var(--muted)">sin ops</span>'
+    meta=d.get("meta_ops",50)
+    prog=m["ops"]/meta*100
+    ref_badge='<span class="ref-badge">REFERENCIA</span>' if es_ref else ''
+    spark = sparkline(m["equity"], color)
+    tbl = tabla_trades(d.get("trades",[]), f"{idx}")
+    return f'''<div class="card" style="border-top:2px solid {color}">
+      <div class="card-head">
+        <div class="card-title"><h2>{d["nombre"]}</h2><span class="mercado">{d["mercado"]}</span></div>
+        <div class="card-head-right">{ref_badge}<span class="ops-count">{m["ops"]}/{meta}</span></div>
       </div>
-      <div class="dd-section"><div class="dd-label"><span>Distancia al limite Apex DD</span><span>{dd_pct:.0f}%</span></div>{barra(dd_pct,dd_c)}</div>
-      <div class="badges">{cb}{db}</div>
+      {pos}
+      <div class="spark-wrap">{spark}</div>
+      <div class="metrics-grid">
+        <div class="metric"><span class="metric-label">WIN RATE</span><span class="metric-val" style="color:{wr_c}">{m["wr"]:.0f}%</span><span class="metric-sub">{m["wins"]}W/{m["losses"]}L</span></div>
+        <div class="metric"><span class="metric-label">P.FACTOR</span><span class="metric-val" style="color:{pf_c}">{m["pf"]:.2f}</span><span class="metric-sub">{racha_html}</span></div>
+        <div class="metric"><span class="metric-label">P&L SIM</span><span class="metric-val" style="color:{gan_c}">${m["ganancia"]:+,.0f}</span><span class="metric-sub">simulado</span></div>
+        <div class="metric"><span class="metric-label">PEOR DD</span><span class="metric-val">${m["max_dd"]:,.0f}</span><span class="metric-sub">lim ${APEX_DD:,}</span></div>
+      </div>
+      <div class="prog-mini"><div class="prog-mini-label"><span>Progreso a {meta} ops</span><span>{prog:.0f}%</span></div>{barra(prog,color)}</div>
       {tbl}
     </div>'''
 
-def card_apex(d):
-    m=d["met"]; est=d["estado"]
-    estado_cls, estado_txt = estado_cuenta_apex(m, est)
-    ganancia = est.get("ganancia_total", m["ganancia"]) if est else m["ganancia"]
-    target_pct = ganancia/APEX_TARGET*100
-    falta = max(0, APEX_TARGET-ganancia)
-    dd_pct=m["max_dd"]/APEX_DD*100
-    dd_c="var(--green)" if dd_pct<60 else ("var(--amber)" if dd_pct<90 else "var(--red)")
-    gan_dia = est.get("ganancia_hoy",0) if est else 0
-    consist_pct = gan_dia/APEX_CONSISTENCY*100
-    estado_color={"activa":"var(--green)","pasada":"var(--accent)","quemada":"var(--red)"}[estado_cls]
-    if d["activas"]:
-        chips="".join(f'<span class="pos-chip">{a}</span>' for a in d["activas"])
-        pos=f'<div class="pos-row"><span class="pos-label">ABIERTA</span>{chips}</div>'
-    else:
-        pos='<div class="pos-row"><span class="pos-label">ABIERTA</span><span class="pos-none">Sin posicion</span></div>'
-    return f'''<div class="card card-apex">
-      <div class="card-head">
-        <div><h2>{d["nombre"]}</h2><span class="cuenta-tag">{d.get("cuenta","Apex")}</span></div>
-        <span class="estado-badge" style="background:{estado_color}1a;color:{estado_color}">{estado_txt}</span>
+def card_claude(memoria, patrones):
+    decisiones = [m for m in memoria if not str(m.get("mi_razon","")).startswith("Error")]
+    total_dec = len(decisiones)
+    enters = [d for d in decisiones if d.get("mi_decision")=="ENTER"]
+    skips  = [d for d in decisiones if d.get("mi_decision")=="SKIP"]
+    # Ultimas decisiones
+    ult_html=""
+    for d in reversed(decisiones[-6:]):
+        dec=d.get("mi_decision","?")
+        conf=d.get("mi_confianza",0)
+        conf_pct=conf*100 if conf<=1 else conf
+        razon=d.get("mi_razon","")[:70]
+        sym=d.get("symbol","?"); acc=d.get("accion","")
+        ts=d.get("timestamp","")[:16]
+        res=d.get("resultado")
+        dec_c="var(--green)" if dec=="ENTER" else "var(--muted)"
+        if res=="TP": res_html='<span style="color:var(--green)">→ TP ✅</span>'
+        elif res=="SL": res_html='<span style="color:var(--red)">→ SL ❌</span>'
+        elif res: res_html=f'<span style="color:var(--muted)">→ {res}</span>'
+        else: res_html=''
+        ult_html+=f'''<div class="claude-dec">
+          <div class="claude-dec-top"><span class="dec-badge" style="color:{dec_c}">{dec}</span>
+            <span class="dec-sym">{acc} {sym}</span><span class="dec-conf">{conf_pct:.0f}%</span>{res_html}</div>
+          <div class="claude-dec-razon">{razon}</div>
+          <div class="claude-dec-ts">{ts}</div></div>'''
+    # Patrones
+    pat_total = patrones.get("total",0)
+    pat_wr = patrones.get("wr",0)
+    pat_gan = patrones.get("ganancia_total",0)
+    errores = patrones.get("errores_recientes",[])
+    aciertos = patrones.get("aciertos_recientes",[])
+    lecciones=""
+    for e in errores[-3:]:
+        lecciones+=f'<div class="leccion leccion-err">❌ {e.get("fecha","")}: {e.get("razon","")[:60]} → -${abs(e.get("perdida",0)):,.0f}</div>'
+    for a in aciertos[-3:]:
+        lecciones+=f'<div class="leccion leccion-ok">✅ {a.get("fecha","")}: {a.get("razon","")[:60]} → +${a.get("ganancia",0):,.0f}</div>'
+    if not lecciones:
+        lecciones='<div class="leccion" style="color:var(--muted)">Claude aun esta acumulando patrones...</div>'
+    gan_c="var(--green)" if pat_gan>=0 else "var(--red)"
+    return f'''<div class="claude-panel">
+      <div class="claude-head">
+        <div class="claude-title"><span class="claude-icon">🧠</span><h2>Claude Brain</h2></div>
+        <span class="claude-status">● ACTIVO</span>
       </div>
-      {pos}
-      <div class="target-section">
-        <div class="dd-label"><span>Progreso al target</span><span>${ganancia:+,.0f} / ${APEX_TARGET:,}</span></div>
-        {barra(target_pct,'var(--green)' if target_pct>=0 else 'var(--red)')}
-        <span class="falta-txt">{'¡Target alcanzado!' if falta==0 else f'Faltan ${falta:,.0f}'}</span>
+      <div class="claude-stats">
+        <div class="cstat"><span class="cstat-val">{total_dec}</span><span class="cstat-label">decisiones</span></div>
+        <div class="cstat"><span class="cstat-val" style="color:var(--green)">{len(enters)}</span><span class="cstat-label">ENTER</span></div>
+        <div class="cstat"><span class="cstat-val" style="color:var(--muted)">{len(skips)}</span><span class="cstat-label">SKIP</span></div>
+        <div class="cstat"><span class="cstat-val" style="color:{gan_c}">${pat_gan:+,.0f}</span><span class="cstat-label">P&L decisiones</span></div>
       </div>
-      <div class="metrics-grid">
-        <div class="metric"><span class="metric-label">WIN RATE</span><span class="metric-val">{m["wr"]:.1f}%</span><span class="metric-sub">{m["ops"]} ops</span></div>
-        <div class="metric"><span class="metric-label">PROFIT FACTOR</span><span class="metric-val">{m["pf"]:.2f}</span><span class="metric-sub">{'rentable' if m["pf"]>1 else '—'}</span></div>
+      <div class="claude-cols">
+        <div class="claude-col">
+          <h4>Ultimas decisiones</h4>
+          <div class="claude-decs">{ult_html if ult_html else '<div class="leccion" style="color:var(--muted)">Sin decisiones aun</div>'}</div>
+        </div>
+        <div class="claude-col">
+          <h4>Patrones aprendidos</h4>
+          <div class="lecciones">{lecciones}</div>
+        </div>
       </div>
-      <div class="dd-section"><div class="dd-label"><span>DD actual</span><span style="color:{dd_c}">${m["max_dd"]:,.0f} / ${APEX_DD:,}</span></div>{barra(dd_pct,dd_c)}</div>
-      <div class="dd-section"><div class="dd-label"><span>Ganancia hoy (consistency)</span><span>${gan_dia:+,.0f} / ${APEX_CONSISTENCY:,}</span></div>{barra(consist_pct,'var(--amber)' if consist_pct>85 else 'var(--accent)')}</div>
     </div>'''
 
-sem_color={"verde":"var(--green)","ambar":"var(--amber)","rojo":"var(--red)"}[sem[0]]
+# ============================================================
+#  PUBLICAR
+# ============================================================
+def push_html():
+    if not TOKEN: print("Sin GH_TOKEN"); return
+    with open("index.html","rb") as f: html=f.read()
+    url=f"https://api.github.com/repos/{OWNER}/panel-trading/contents/index.html"
+    req=urllib.request.Request(url); req.add_header("Authorization",f"Bearer {TOKEN}")
+    req.add_header("Accept","application/vnd.github+json")
+    try:
+        with urllib.request.urlopen(req) as r: sha=json.load(r)["sha"]
+    except: sha=None
+    payload={"message":f"Dashboard {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+             "content":base64.b64encode(html).decode(),"branch":"main"}
+    if sha: payload["sha"]=sha
+    req2=urllib.request.Request(url,data=json.dumps(payload).encode(),method="PUT")
+    req2.add_header("Authorization",f"Bearer {TOKEN}")
+    req2.add_header("Accept","application/vnd.github+json")
+    req2.add_header("Content-Type","application/json")
+    try:
+        with urllib.request.urlopen(req2): print("Dashboard publicado en GitHub Pages")
+    except Exception as e: print(f"Error push: {e}")
 
-# Seccion validacion
-seccion_val=""
-if val:
-    cards_val="".join(card_validacion(d, i) for i, d in enumerate(val))
-    seccion_val=f'''
-    <div class="seccion-titulo"><span class="dot dot-val"></span>EN VALIDACION</div>
-    <div class="verdict">
-      <div class="light" style="background:{sem_color};box-shadow:0 0 24px {sem_color}"></div>
-      <div class="verdict-txt"><h3>{sem[1]}</h3><p>{sem[2]}</p></div>
-    </div>
-    <div class="progress-block">
-      <h4>Progreso hacia la decision</h4>
-      <div class="prog-row"><div class="prog-label"><span>ORB — Fase 1: Bot solo (meta 33)</span><span>{min(orb_ops,33)}/33</span></div>{barra(min(orb_ops,33)/33*100,'var(--accent)')}</div>
-      <div class="prog-row"><div class="prog-label"><span>ORB — Fase 2: Bot + Claude (meta 66)</span><span>{max(0,min(orb_ops-33,33))}/33</span></div>{barra(max(0,min(orb_ops-33,33))/33*100,'var(--green)')}</div>
-      <div class="prog-row"><div class="prog-label"><span>ORB — Fase 3: Refinamiento (meta 100)</span><span>{max(0,orb_ops-66)}/34</span></div>{barra(max(0,orb_ops-66)/34*100,'var(--green)')}</div>
-      <div class="prog-row"><div class="prog-label"><span>Fibonacci GLD (meta 50)</span><span>{fib_ops}/50</span></div>{barra(fib_ops/50*100,'var(--accent)')}</div>
-      <div class="prog-row"><div class="prog-label"><span>WR ORB</span><span>{orb_wr:.1f}% / 45% min</span></div>{barra(orb_wr/45*100 if orb_wr else 0,'var(--green)' if orb_wr>=45 else 'var(--amber)')}</div>
-      <div class="prog-row"><div class="prog-label"><span>Ganancia ORB sim</span><span>${orb_gan:+,.0f}</span></div></div>
-    </div>
-    <div class="grid">{cards_val}</div>'''
+# ============================================================
+#  MAIN
+# ============================================================
+print("Leyendo estados de los bots...")
+datos=[]
+for b in BOTS:
+    estado=fetch_json(b["repo"], b["archivo"])
+    trades=extraer_trades(estado, b["tipo"])
+    met=calc_metricas(trades)
+    activas=posicion_abierta(estado, b["tipo"])
+    datos.append({**b,"met":met,"activas":activas,"estado":estado,"trades":trades})
+    print(f"  {b['nombre']}: {met['ops']} ops, WR {met['wr']:.0f}%")
 
-# Seccion Apex
-seccion_apex=""
-if apex:
-    cards_apex="".join(card_apex(d) for d in apex)
-    total_apex_gan=sum((d["estado"].get("ganancia_total",0) if d["estado"] else 0) for d in apex)
-    seccion_apex=f'''
-    <div class="seccion-titulo"><span class="dot dot-apex"></span>EN APEX REAL</div>
-    <div class="apex-resumen">
-      <span>Cuentas activas: <b>{len(apex)}</b></span>
-      <span>Ganancia total: <b style="color:{'var(--green)' if total_apex_gan>=0 else 'var(--red)'}">${total_apex_gan:+,.0f}</b></span>
-    </div>
-    <div class="grid">{cards_apex}</div>'''
-else:
-    seccion_apex='''
-    <div class="seccion-titulo"><span class="dot dot-apex"></span>EN APEX REAL</div>
-    <div class="empty-apex">Todavia no hay cuentas Apex activas.<br>Cuando pases la validacion y arranques una cuenta, apareceran aqui automaticamente.</div>'''
+print("Leyendo Claude Brain...")
+memoria, patrones = cargar_claude()
+print(f"  {len(memoria)} entradas en memoria")
 
-ahora=datetime.now().strftime("%d %b %Y · %I:%M %p")
+# Totales globales
+cap_total = sum(d["estado"].get("capital",CAPITAL) if d["estado"] else CAPITAL for d in datos if d.get("info")!="referencia")
+gan_total = sum(d["met"]["ganancia"] for d in datos if d.get("info")!="referencia")
+ops_total = sum(d["met"]["ops"] for d in datos if d.get("info")!="referencia")
+wins_total = sum(d["met"]["wins"] for d in datos if d.get("info")!="referencia")
+wr_global = wins_total/ops_total*100 if ops_total>0 else 0
+activas_total = sum(len(d["activas"]) for d in datos)
+
+gg_c="var(--green)" if gan_total>=0 else "var(--red)"
+wr_g_c="var(--green)" if wr_global>=META_WR else "var(--amber)"
+
+cards="".join(card_bot(d,i) for i,d in enumerate(datos))
+claude_html=card_claude(memoria, patrones)
+ahora=datetime.now().strftime("%d %b %Y · %H:%M UTC")
 
 html=f'''<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Panel de Trading</title>
+<meta http-equiv="refresh" content="120">
+<title>Trading Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{{--bg:#0a0e14;--panel:#121822;--panel-2:#1a2130;--line:#232c3d;--text:#e4e9f0;--muted:#7a8699;--green:#2ee6a0;--amber:#ffb547;--red:#ff5c6c;--accent:#4d9fff;}}
+:root{{--bg:#070a10;--panel:#10151f;--panel-2:#171e2b;--line:#212a3a;--text:#e4e9f0;--muted:#6b7689;--green:#2ee6a0;--amber:#ffb547;--red:#ff5c6c;--accent:#4d9fff;}}
 *{{margin:0;padding:0;box-sizing:border-box;}}
-body{{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;padding:24px 16px 60px;background-image:radial-gradient(circle at 20% 0%,rgba(77,159,255,0.06),transparent 40%),radial-gradient(circle at 90% 10%,rgba(46,230,160,0.05),transparent 35%);min-height:100vh;}}
-.wrap{{max-width:1000px;margin:0 auto;}}
-.top{{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px;flex-wrap:wrap;gap:10px;}}
-.top h1{{font-size:24px;font-weight:800;letter-spacing:-0.5px;}}
-.top h1 span{{color:var(--accent);}}
+body{{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;padding:20px 14px 60px;background-image:radial-gradient(circle at 15% 0%,rgba(77,159,255,0.07),transparent 42%),radial-gradient(circle at 95% 8%,rgba(46,230,160,0.05),transparent 38%);min-height:100vh;}}
+.wrap{{max-width:1160px;margin:0 auto;}}
+.top{{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:10px;}}
+.top h1{{font-size:22px;font-weight:800;letter-spacing:-0.5px;display:flex;align-items:center;gap:10px;}}
+.top h1 .live{{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s infinite;}}
 .top .ts{{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}}
-.seccion-titulo{{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;letter-spacing:1.5px;color:var(--muted);margin:30px 0 16px;text-transform:uppercase;}}
-.seccion-titulo:first-child{{margin-top:0;}}
-.dot{{width:9px;height:9px;border-radius:50%;}}
-.dot-val{{background:var(--amber);}} .dot-apex{{background:var(--green);}}
-.verdict{{background:linear-gradient(135deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:16px;padding:22px 26px;margin-bottom:20px;display:flex;align-items:center;gap:20px;position:relative;overflow:hidden;}}
-.light{{width:48px;height:48px;border-radius:50%;flex-shrink:0;animation:pulse 2s infinite;}}
-@keyframes pulse{{0%,100%{{opacity:1}}50%{{opacity:0.55}}}}
-.verdict-txt h3{{font-size:19px;font-weight:700;}} .verdict-txt p{{color:var(--muted);font-size:13px;margin-top:3px;}}
-.progress-block{{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:20px;}}
-.progress-block h4{{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:15px;}}
-.prog-row{{margin-bottom:16px;}} .prog-row:last-child{{margin-bottom:0;}}
-.prog-label{{display:flex;justify-content:space-between;font-size:13px;margin-bottom:7px;}}
-.prog-label span:last-child{{font-family:'IBM Plex Mono',monospace;}}
-.grid{{display:grid;grid-template-columns:1fr 1fr;gap:18px;}}
-@media (max-width:760px){{.grid{{grid-template-columns:1fr;}} .top h1{{font-size:20px;}}}}
-.card{{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;}}
-.card-apex{{border-color:rgba(46,230,160,0.2);}}
-.card-head{{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:15px;}}
-.card-head h2{{font-size:18px;font-weight:700;}}
-.cuenta-tag{{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}}
-.ops-count{{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);background:var(--panel-2);padding:4px 10px;border-radius:20px;}}
-.estado-badge{{font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;letter-spacing:0.3px;}}
-.pos-row{{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--line);flex-wrap:wrap;}}
-.pos-label{{font-size:10px;letter-spacing:1px;color:var(--muted);background:var(--panel-2);padding:3px 8px;border-radius:4px;}}
-.pos-chip{{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent);background:rgba(77,159,255,0.1);padding:4px 10px;border-radius:6px;}}
-.pos-none{{font-size:13px;color:var(--muted);}}
-.metrics-grid{{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:16px;}}
-.metric{{display:flex;flex-direction:column;gap:2px;}}
-.metric-label{{font-size:10px;letter-spacing:0.8px;color:var(--muted);}}
-.metric-val{{font-family:'IBM Plex Mono',monospace;font-size:23px;font-weight:600;}}
-.metric-sub{{font-size:11px;color:var(--muted);}}
-.target-section{{margin-bottom:16px;}}
-.falta-txt{{font-size:11px;color:var(--muted);margin-top:6px;display:block;}}
-.dd-section{{margin-bottom:13px;}}
-.dd-label{{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px;}}
-.dd-label span:last-child{{font-family:'IBM Plex Mono',monospace;}}
-.bar-track{{height:7px;background:var(--panel-2);border-radius:6px;overflow:hidden;}}
+@keyframes pulse{{0%,100%{{opacity:1}}50%{{opacity:0.4}}}}
+/* Header global */
+.global{{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;}}
+.gstat{{background:linear-gradient(135deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:13px;padding:16px 18px;}}
+.gstat-label{{font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}}
+.gstat-val{{font-family:'IBM Plex Mono',monospace;font-size:25px;font-weight:600;margin-top:5px;}}
+.gstat-sub{{font-size:11px;color:var(--muted);margin-top:2px;}}
+@media (max-width:860px){{.global{{grid-template-columns:repeat(2,1fr);}} .top h1{{font-size:18px;}}}}
+/* Claude panel */
+.claude-panel{{background:linear-gradient(135deg,rgba(201,139,255,0.06),var(--panel));border:1px solid rgba(201,139,255,0.2);border-radius:16px;padding:22px;margin-bottom:24px;}}
+.claude-head{{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}}
+.claude-title{{display:flex;align-items:center;gap:10px;}}
+.claude-title h2{{font-size:19px;font-weight:700;}}
+.claude-icon{{font-size:22px;}}
+.claude-status{{font-size:11px;font-weight:700;color:var(--green);letter-spacing:0.5px;}}
+.claude-stats{{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}}
+.cstat{{display:flex;flex-direction:column;gap:3px;}}
+.cstat-val{{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;}}
+.cstat-label{{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}}
+.claude-cols{{display:grid;grid-template-columns:1fr 1fr;gap:20px;}}
+.claude-col h4{{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;}}
+.claude-dec{{background:var(--panel-2);border-radius:9px;padding:11px 13px;margin-bottom:9px;}}
+.claude-dec-top{{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:5px;flex-wrap:wrap;}}
+.dec-badge{{font-weight:700;font-family:'IBM Plex Mono',monospace;font-size:12px;}}
+.dec-sym{{color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;}}
+.dec-conf{{color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:12px;margin-left:auto;}}
+.claude-dec-razon{{font-size:12px;color:var(--muted);line-height:1.5;}}
+.claude-dec-ts{{font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:4px;opacity:0.6;}}
+.lecciones{{display:flex;flex-direction:column;gap:8px;}}
+.leccion{{font-size:12px;line-height:1.5;padding:9px 12px;border-radius:8px;background:var(--panel-2);}}
+.leccion-err{{border-left:2px solid var(--red);}}
+.leccion-ok{{border-left:2px solid var(--green);}}
+@media (max-width:760px){{.claude-cols{{grid-template-columns:1fr;}} .claude-stats{{grid-template-columns:repeat(2,1fr);}}}}
+/* Grid de bots */
+.section-label{{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;letter-spacing:1.5px;color:var(--muted);margin:8px 0 16px;text-transform:uppercase;}}
+.grid{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}}
+@media (max-width:980px){{.grid{{grid-template-columns:1fr 1fr;}}}}
+@media (max-width:680px){{.grid{{grid-template-columns:1fr;}}}}
+.card{{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;}}
+.card-head{{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:13px;}}
+.card-title h2{{font-size:16px;font-weight:700;}}
+.mercado{{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}}
+.card-head-right{{display:flex;align-items:center;gap:6px;}}
+.ops-count{{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--panel-2);padding:4px 9px;border-radius:20px;}}
+.ref-badge{{font-size:8px;font-weight:700;color:var(--muted);background:var(--panel-2);padding:3px 6px;border-radius:4px;letter-spacing:0.5px;}}
+.pos-row{{display:flex;align-items:center;gap:9px;margin-bottom:13px;padding-bottom:12px;border-bottom:1px solid var(--line);flex-wrap:wrap;}}
+.pos-label{{font-size:10px;letter-spacing:0.5px;color:var(--muted);}}
+.pos-chip{{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);background:rgba(77,159,255,0.1);padding:3px 9px;border-radius:6px;}}
+.pos-none{{font-size:12px;color:var(--muted);}}
+.spark-wrap{{margin-bottom:14px;height:48px;}}
+.spark-wrap svg{{width:100%;height:48px;display:block;}}
+.metrics-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}}
+.metric{{display:flex;flex-direction:column;gap:1px;}}
+.metric-label{{font-size:9px;letter-spacing:0.6px;color:var(--muted);}}
+.metric-val{{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;}}
+.metric-sub{{font-size:10px;color:var(--muted);}}
+.racha{{font-size:10px;font-family:'IBM Plex Mono',monospace;}}
+.prog-mini{{margin-bottom:6px;}}
+.prog-mini-label{{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px;}}
+.prog-mini-label span:last-child{{font-family:'IBM Plex Mono',monospace;}}
+.bar-track{{height:6px;background:var(--panel-2);border-radius:6px;overflow:hidden;}}
 .bar-fill{{height:100%;border-radius:6px;transition:width 0.6s;}}
-.badges{{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}}
-.badge{{font-size:10px;letter-spacing:0.5px;padding:5px 10px;border-radius:6px;font-weight:600;}}
-.badge-ok{{background:rgba(46,230,160,0.12);color:var(--green);}}
-.badge-bad{{background:rgba(255,92,108,0.12);color:var(--red);}}
-.apex-resumen{{display:flex;gap:24px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 20px;margin-bottom:18px;font-size:13px;color:var(--muted);}}
-.apex-resumen b{{color:var(--text);font-family:'IBM Plex Mono',monospace;}}
-.empty-apex{{background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:30px;text-align:center;color:var(--muted);font-size:13px;line-height:1.7;}}
-.footer{{text-align:center;margin-top:34px;font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;line-height:1.7;}}
+.trades-toggle{{font-size:11px;color:var(--accent);cursor:pointer;margin-top:12px;user-select:none;font-weight:600;}}
+.trades-wrap{{margin-top:10px;}}
+.trades-tbl{{width:100%;border-collapse:collapse;font-size:11px;}}
+.trades-tbl th{{text-align:left;color:var(--muted);font-weight:500;padding:5px 6px;border-bottom:1px solid var(--line);font-size:10px;letter-spacing:0.5px;}}
+.trades-tbl td{{padding:5px 6px;border-bottom:1px solid rgba(33,42,58,0.5);font-family:'IBM Plex Mono',monospace;}}
+.footer{{text-align:center;margin-top:30px;font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;line-height:1.8;}}
 .footer b{{color:var(--text);}}
-.refresh-note{{text-align:center;font-size:11px;color:var(--muted);margin-top:8px;}}
 </style></head><body><div class="wrap">
-  <div class="top"><h1>Panel de Trading <span>· Apex</span></h1><div class="ts">Actualizado: {ahora}</div></div>
-  {seccion_val}
-  {seccion_apex}
+  <div class="top">
+    <h1><span class="live"></span>Trading Dashboard</h1>
+    <div class="ts">Auto-refresh 2min · {ahora}</div>
+  </div>
+
+  <div class="global">
+    <div class="gstat"><div class="gstat-label">Capital Total</div><div class="gstat-val">${cap_total:,.0f}</div><div class="gstat-sub">5 estrategias</div></div>
+    <div class="gstat"><div class="gstat-label">P&L Combinado</div><div class="gstat-val" style="color:{gg_c}">${gan_total:+,.0f}</div><div class="gstat-sub">simulado</div></div>
+    <div class="gstat"><div class="gstat-label">WR Global</div><div class="gstat-val" style="color:{wr_g_c}">{wr_global:.0f}%</div><div class="gstat-sub">{wins_total}W de {ops_total}</div></div>
+    <div class="gstat"><div class="gstat-label">Ops Totales</div><div class="gstat-val">{ops_total}</div><div class="gstat-sub">acumuladas</div></div>
+    <div class="gstat"><div class="gstat-label">Posiciones</div><div class="gstat-val" style="color:{'var(--accent)' if activas_total else 'var(--muted)'}">{activas_total}</div><div class="gstat-sub">abiertas ahora</div></div>
+  </div>
+
+  {claude_html}
+
+  <div class="section-label">◆ ESTRATEGIAS EN VALIDACION</div>
+  <div class="grid">{cards}</div>
+
   <div class="footer">
-    Criterio de decision: <b>{META_OPS}+ operaciones</b> con <b>WR combinado ≥ {META_WR}%</b> = luz verde Apex<br>
-    Se actualiza automaticamente · Datos de validacion en vivo
+    Meta: <b>WR ≥ {META_WR}%</b> sostenido por estrategia → luz verde para fondeo<br>
+    Sistema autonomo en Railway · Claude Brain analiza cada señal · Datos en vivo
   </div>
 </div><script>
-function toggleTrades(id) {{
-  var wrap = document.getElementById(id);
-  var btn = document.getElementById('btn-' + id);
-  if (wrap.style.display === 'none') {{
-    wrap.style.display = 'block';
-    btn.innerHTML = 'Ocultar operaciones ▴';
-  }} else {{
-    wrap.style.display = 'none';
-    btn.innerHTML = 'Ver operaciones ▾';
-  }}
+function tg(id){{
+  var w=document.getElementById(id), b=document.getElementById('btn-'+id);
+  if(w.style.display==='none'){{w.style.display='block';b.innerHTML='Ocultar operaciones ▴';}}
+  else{{w.style.display='none';b.innerHTML='Ver operaciones ▾';}}
 }}
-</script>
-</body></html>'''
+</script></body></html>'''
 
 with open("index.html","w") as f:
     f.write(html)
 print("\nindex.html generado correctamente")
-push_html_a_github()
+push_html()
