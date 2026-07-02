@@ -86,14 +86,14 @@ body{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;paddin
 </style></head><body><div class="wrap">
   <div class="top">
     <h1><span class="live"></span>Trading Dashboard</h1>
-    <div class="ts">Auto-refresh 2min · 02 Jul 2026 · 19:01 UTC</div>
+    <div class="ts">Auto-refresh 2min · 02 Jul 2026 · 19:12 UTC</div>
   </div>
 
   <div class="global">
-    <div class="gstat"><div class="gstat-label">Capital Total</div><div class="gstat-val">$749,592</div><div class="gstat-sub">5 estrategias</div></div>
-    <div class="gstat"><div class="gstat-label">P&L Combinado</div><div class="gstat-val" style="color:var(--red)">$-408</div><div class="gstat-sub">simulado</div></div>
-    <div class="gstat"><div class="gstat-label">WR Global</div><div class="gstat-val" style="color:var(--green)">45%</div><div class="gstat-sub">9W de 20</div></div>
-    <div class="gstat"><div class="gstat-label">Ops Totales</div><div class="gstat-val">20</div><div class="gstat-sub">acumuladas</div></div>
+    <div class="gstat"><div class="gstat-label">Capital Total</div><div class="gstat-val">$749,856</div><div class="gstat-sub">5 estrategias</div></div>
+    <div class="gstat"><div class="gstat-label">P&L Combinado</div><div class="gstat-val" style="color:var(--red)">$-144</div><div class="gstat-sub">simulado</div></div>
+    <div class="gstat"><div class="gstat-label">WR Global</div><div class="gstat-val" style="color:var(--green)">45%</div><div class="gstat-sub">5W de 11</div></div>
+    <div class="gstat"><div class="gstat-label">Ops Totales</div><div class="gstat-val">11</div><div class="gstat-sub">acumuladas</div></div>
     <div class="gstat"><div class="gstat-label">Posiciones</div><div class="gstat-val" style="color:var(--muted)">0</div><div class="gstat-sub">abiertas ahora</div></div>
   </div>
 
@@ -148,99 +148,63 @@ body{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;paddin
   <div class="grid"><div class="card" style="border-top:2px solid #4d9fff">
       <div class="card-head">
         <div class="card-title"><h2>ORB</h2><span class="mercado">QQQ → MNQ</span></div>
-        <div class="card-head-right"><span class="ops-count">4/100</span></div>
+        <div class="card-head-right"><span class="ops-count">0/100</span></div>
       </div>
       <div class="pos-row"><span class="pos-label">○ FLAT</span><span class="pos-none">Sin posicion</span></div>
-      <div class="spark-wrap"><svg width="260" height="48" viewBox="0 0 260 48" preserveAspectRatio="none">
-      <defs><linearGradient id="g140398042830528" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#ff5c6c" stop-opacity="0.25"/>
-        <stop offset="100%" stop-color="#ff5c6c" stop-opacity="0"/></linearGradient></defs>
-      <path d="M0.0,3.0 L65.0,23.2 L130.0,29.2 L195.0,45.0 L260.0,28.3 L260,48 L0,48 Z" fill="url(#g140398042830528)"/>
-      <path d="M0.0,3.0 L65.0,23.2 L130.0,29.2 L195.0,45.0 L260.0,28.3" fill="none" stroke="#ff5c6c" stroke-width="2" stroke-linejoin="round"/>
-    </svg></div>
+      <div class="spark-wrap"><svg width="260" height="48"></svg></div>
       <div class="metrics-grid">
-        <div class="metric"><span class="metric-label">WIN RATE</span><span class="metric-val" style="color:var(--red)">25%</span><span class="metric-sub">1W/3L</span></div>
-        <div class="metric"><span class="metric-label">P.FACTOR</span><span class="metric-val" style="color:var(--red)">0.40</span><span class="metric-sub"><span class="racha" style="color:var(--green)">1W seguidas</span></span></div>
-        <div class="metric"><span class="metric-label">P&L SIM</span><span class="metric-val" style="color:var(--red)">$-1,995</span><span class="metric-sub">simulado</span></div>
-        <div class="metric"><span class="metric-label">PEOR DD</span><span class="metric-val">$3,313</span><span class="metric-sub">lim $4,000</span></div>
+        <div class="metric"><span class="metric-label">WIN RATE</span><span class="metric-val" style="color:var(--red)">0%</span><span class="metric-sub">0W/0L</span></div>
+        <div class="metric"><span class="metric-label">P.FACTOR</span><span class="metric-val" style="color:var(--red)">0.00</span><span class="metric-sub"><span class="racha" style="color:var(--muted)">sin ops</span></span></div>
+        <div class="metric"><span class="metric-label">P&L SIM</span><span class="metric-val" style="color:var(--green)">$+0</span><span class="metric-sub">simulado</span></div>
+        <div class="metric"><span class="metric-label">PEOR DD</span><span class="metric-val">$0</span><span class="metric-sub">lim $4,000</span></div>
       </div>
-      <div class="prog-mini"><div class="prog-mini-label"><span>Progreso a 100 ops</span><span>4%</span></div><div class="bar-track"><div class="bar-fill" style="width:4.0%;background:#4d9fff"></div></div></div>
-      <div class="trades-toggle" onclick="tg('tr-0')" id="btn-tr-0">Ver operaciones ▾</div>
-    <div class="trades-wrap" id="tr-0" style="display:none">
-      <table class="trades-tbl"><thead><tr><th>#</th><th>Fecha</th><th>Dir</th><th>Cierre</th><th style="text-align:right">P&L</th></tr></thead>
-      <tbody><tr><td style="color:#7a8699">4</td><td>2026-06-30</td><td style="color:#2ee6a0">▲ LONG</td><td style="color:#7a8699">EOD 🕐</td><td style="color:#2ee6a0;text-align:right">$+1,319</td></tr><tr><td style="color:#7a8699">3</td><td>2026-06-29</td><td style="color:#ff5c6c">▼ SHORT</td><td style="color:#ff5c6c">SL ❌</td><td style="color:#ff5c6c;text-align:right">$-1,248</td></tr><tr><td style="color:#7a8699">2</td><td>2026-06-26</td><td style="color:#2ee6a0">▲ LONG</td><td style="color:#7a8699">EOD 🕐</td><td style="color:#ff5c6c;text-align:right">$-469</td></tr><tr><td style="color:#7a8699">1</td><td>2026-06-25</td><td style="color:#ff5c6c">▼ SHORT</td><td style="color:#7a8699">EOD 🕐</td><td style="color:#ff5c6c;text-align:right">$-1,596</td></tr></tbody></table></div>
+      <div class="prog-mini"><div class="prog-mini-label"><span>Progreso a 100 ops</span><span>0%</span></div><div class="bar-track"><div class="bar-fill" style="width:0%;background:#4d9fff"></div></div></div>
+      
     </div><div class="card" style="border-top:2px solid #ffb547">
       <div class="card-head">
         <div class="card-title"><h2>Fibonacci GLD</h2><span class="mercado">GLD → MGC</span></div>
-        <div class="card-head-right"><span class="ops-count">1/50</span></div>
+        <div class="card-head-right"><span class="ops-count">0/50</span></div>
       </div>
       <div class="pos-row"><span class="pos-label">○ FLAT</span><span class="pos-none">Sin posicion</span></div>
-      <div class="spark-wrap"><svg width="260" height="48" viewBox="0 0 260 48" preserveAspectRatio="none">
-      <defs><linearGradient id="g140398046022080" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#ff5c6c" stop-opacity="0.25"/>
-        <stop offset="100%" stop-color="#ff5c6c" stop-opacity="0"/></linearGradient></defs>
-      <path d="M0.0,3.0 L260.0,45.0 L260,48 L0,48 Z" fill="url(#g140398046022080)"/>
-      <path d="M0.0,3.0 L260.0,45.0" fill="none" stroke="#ff5c6c" stroke-width="2" stroke-linejoin="round"/>
-    </svg></div>
+      <div class="spark-wrap"><svg width="260" height="48"></svg></div>
       <div class="metrics-grid">
-        <div class="metric"><span class="metric-label">WIN RATE</span><span class="metric-val" style="color:var(--red)">0%</span><span class="metric-sub">0W/1L</span></div>
-        <div class="metric"><span class="metric-label">P.FACTOR</span><span class="metric-val" style="color:var(--red)">0.00</span><span class="metric-sub"><span class="racha" style="color:var(--red)">1L seguidas</span></span></div>
-        <div class="metric"><span class="metric-label">P&L SIM</span><span class="metric-val" style="color:var(--red)">$-1,329</span><span class="metric-sub">simulado</span></div>
-        <div class="metric"><span class="metric-label">PEOR DD</span><span class="metric-val">$1,329</span><span class="metric-sub">lim $4,000</span></div>
+        <div class="metric"><span class="metric-label">WIN RATE</span><span class="metric-val" style="color:var(--red)">0%</span><span class="metric-sub">0W/0L</span></div>
+        <div class="metric"><span class="metric-label">P.FACTOR</span><span class="metric-val" style="color:var(--red)">0.00</span><span class="metric-sub"><span class="racha" style="color:var(--muted)">sin ops</span></span></div>
+        <div class="metric"><span class="metric-label">P&L SIM</span><span class="metric-val" style="color:var(--green)">$+0</span><span class="metric-sub">simulado</span></div>
+        <div class="metric"><span class="metric-label">PEOR DD</span><span class="metric-val">$0</span><span class="metric-sub">lim $4,000</span></div>
       </div>
-      <div class="prog-mini"><div class="prog-mini-label"><span>Progreso a 50 ops</span><span>2%</span></div><div class="bar-track"><div class="bar-fill" style="width:2.0%;background:#ffb547"></div></div></div>
-      <div class="trades-toggle" onclick="tg('tr-1')" id="btn-tr-1">Ver operaciones ▾</div>
-    <div class="trades-wrap" id="tr-1" style="display:none">
-      <table class="trades-tbl"><thead><tr><th>#</th><th>Fecha</th><th>Dir</th><th>Cierre</th><th style="text-align:right">P&L</th></tr></thead>
-      <tbody><tr><td style="color:#7a8699">1</td><td>2026-07-02</td><td style="color:#ff5c6c">▼ SHORT</td><td style="color:#7a8699">EOD 🕐</td><td style="color:#ff5c6c;text-align:right">$-1,329</td></tr></tbody></table></div>
+      <div class="prog-mini"><div class="prog-mini-label"><span>Progreso a 50 ops</span><span>0%</span></div><div class="bar-track"><div class="bar-fill" style="width:0%;background:#ffb547"></div></div></div>
+      
     </div><div class="card" style="border-top:2px solid #2ee6a0">
       <div class="card-head">
         <div class="card-title"><h2>VWAP Bounce</h2><span class="mercado">QQQ</span></div>
-        <div class="card-head-right"><span class="ops-count">2/50</span></div>
+        <div class="card-head-right"><span class="ops-count">0/50</span></div>
       </div>
       <div class="pos-row"><span class="pos-label">○ FLAT</span><span class="pos-none">Sin posicion</span></div>
-      <div class="spark-wrap"><svg width="260" height="48" viewBox="0 0 260 48" preserveAspectRatio="none">
-      <defs><linearGradient id="g140398042827712" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#2ee6a0" stop-opacity="0.25"/>
-        <stop offset="100%" stop-color="#2ee6a0" stop-opacity="0"/></linearGradient></defs>
-      <path d="M0.0,45.0 L130.0,3.0 L260.0,24.2 L260,48 L0,48 Z" fill="url(#g140398042827712)"/>
-      <path d="M0.0,45.0 L130.0,3.0 L260.0,24.2" fill="none" stroke="#2ee6a0" stroke-width="2" stroke-linejoin="round"/>
-    </svg></div>
+      <div class="spark-wrap"><svg width="260" height="48"></svg></div>
       <div class="metrics-grid">
-        <div class="metric"><span class="metric-label">WIN RATE</span><span class="metric-val" style="color:var(--green)">50%</span><span class="metric-sub">1W/1L</span></div>
-        <div class="metric"><span class="metric-label">P.FACTOR</span><span class="metric-val" style="color:var(--green)">1.98</span><span class="metric-sub"><span class="racha" style="color:var(--red)">1L seguidas</span></span></div>
-        <div class="metric"><span class="metric-label">P&L SIM</span><span class="metric-val" style="color:var(--green)">$+595</span><span class="metric-sub">simulado</span></div>
-        <div class="metric"><span class="metric-label">PEOR DD</span><span class="metric-val">$605</span><span class="metric-sub">lim $4,000</span></div>
+        <div class="metric"><span class="metric-label">WIN RATE</span><span class="metric-val" style="color:var(--red)">0%</span><span class="metric-sub">0W/0L</span></div>
+        <div class="metric"><span class="metric-label">P.FACTOR</span><span class="metric-val" style="color:var(--red)">0.00</span><span class="metric-sub"><span class="racha" style="color:var(--muted)">sin ops</span></span></div>
+        <div class="metric"><span class="metric-label">P&L SIM</span><span class="metric-val" style="color:var(--green)">$+0</span><span class="metric-sub">simulado</span></div>
+        <div class="metric"><span class="metric-label">PEOR DD</span><span class="metric-val">$0</span><span class="metric-sub">lim $4,000</span></div>
       </div>
-      <div class="prog-mini"><div class="prog-mini-label"><span>Progreso a 50 ops</span><span>4%</span></div><div class="bar-track"><div class="bar-fill" style="width:4.0%;background:#2ee6a0"></div></div></div>
-      <div class="trades-toggle" onclick="tg('tr-2')" id="btn-tr-2">Ver operaciones ▾</div>
-    <div class="trades-wrap" id="tr-2" style="display:none">
-      <table class="trades-tbl"><thead><tr><th>#</th><th>Fecha</th><th>Dir</th><th>Cierre</th><th style="text-align:right">P&L</th></tr></thead>
-      <tbody><tr><td style="color:#7a8699">2</td><td>2026-07-01</td><td style="color:#ff5c6c">▼ SHORT</td><td style="color:#ff5c6c">SL ❌</td><td style="color:#ff5c6c;text-align:right">$-605</td></tr><tr><td style="color:#7a8699">1</td><td>2026-06-23</td><td style="color:#ff5c6c">▼ SHORT</td><td style="color:#2ee6a0">TP ✅</td><td style="color:#2ee6a0;text-align:right">$+1,200</td></tr></tbody></table></div>
+      <div class="prog-mini"><div class="prog-mini-label"><span>Progreso a 50 ops</span><span>0%</span></div><div class="bar-track"><div class="bar-fill" style="width:0%;background:#2ee6a0"></div></div></div>
+      
     </div><div class="card" style="border-top:2px solid #c98bff">
       <div class="card-head">
         <div class="card-title"><h2>RSI(2) Connors</h2><span class="mercado">SPY</span></div>
-        <div class="card-head-right"><span class="ops-count">2/50</span></div>
+        <div class="card-head-right"><span class="ops-count">0/50</span></div>
       </div>
       <div class="pos-row"><span class="pos-label">○ FLAT</span><span class="pos-none">Sin posicion</span></div>
-      <div class="spark-wrap"><svg width="260" height="48" viewBox="0 0 260 48" preserveAspectRatio="none">
-      <defs><linearGradient id="g140398042824960" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#c98bff" stop-opacity="0.25"/>
-        <stop offset="100%" stop-color="#c98bff" stop-opacity="0"/></linearGradient></defs>
-      <path d="M0.0,45.0 L130.0,24.1 L260.0,3.0 L260,48 L0,48 Z" fill="url(#g140398042824960)"/>
-      <path d="M0.0,45.0 L130.0,24.1 L260.0,3.0" fill="none" stroke="#c98bff" stroke-width="2" stroke-linejoin="round"/>
-    </svg></div>
+      <div class="spark-wrap"><svg width="260" height="48"></svg></div>
       <div class="metrics-grid">
-        <div class="metric"><span class="metric-label">WIN RATE</span><span class="metric-val" style="color:var(--green)">100%</span><span class="metric-sub">2W/0L</span></div>
-        <div class="metric"><span class="metric-label">P.FACTOR</span><span class="metric-val" style="color:var(--green)">99.00</span><span class="metric-sub"><span class="racha" style="color:var(--green)">2W seguidas</span></span></div>
-        <div class="metric"><span class="metric-label">P&L SIM</span><span class="metric-val" style="color:var(--green)">$+2,464</span><span class="metric-sub">simulado</span></div>
+        <div class="metric"><span class="metric-label">WIN RATE</span><span class="metric-val" style="color:var(--red)">0%</span><span class="metric-sub">0W/0L</span></div>
+        <div class="metric"><span class="metric-label">P.FACTOR</span><span class="metric-val" style="color:var(--red)">0.00</span><span class="metric-sub"><span class="racha" style="color:var(--muted)">sin ops</span></span></div>
+        <div class="metric"><span class="metric-label">P&L SIM</span><span class="metric-val" style="color:var(--green)">$+0</span><span class="metric-sub">simulado</span></div>
         <div class="metric"><span class="metric-label">PEOR DD</span><span class="metric-val">$0</span><span class="metric-sub">lim $4,000</span></div>
       </div>
-      <div class="prog-mini"><div class="prog-mini-label"><span>Progreso a 50 ops</span><span>4%</span></div><div class="bar-track"><div class="bar-fill" style="width:4.0%;background:#c98bff"></div></div></div>
-      <div class="trades-toggle" onclick="tg('tr-3')" id="btn-tr-3">Ver operaciones ▾</div>
-    <div class="trades-wrap" id="tr-3" style="display:none">
-      <table class="trades-tbl"><thead><tr><th>#</th><th>Fecha</th><th>Dir</th><th>Cierre</th><th style="text-align:right">P&L</th></tr></thead>
-      <tbody><tr><td style="color:#7a8699">2</td><td>2026-06-29</td><td style="color:#2ee6a0">▲ LONG</td><td style="color:#7a8699">EOD 🕐</td><td style="color:#2ee6a0;text-align:right">$+1,239</td></tr><tr><td style="color:#7a8699">1</td><td>2026-06-18</td><td style="color:#2ee6a0">▲ LONG</td><td style="color:#7a8699">EOD 🕐</td><td style="color:#2ee6a0;text-align:right">$+1,225</td></tr></tbody></table></div>
+      <div class="prog-mini"><div class="prog-mini-label"><span>Progreso a 50 ops</span><span>0%</span></div><div class="bar-track"><div class="bar-fill" style="width:0%;background:#c98bff"></div></div></div>
+      
     </div><div class="card" style="border-top:2px solid #ff8fa3">
       <div class="card-head">
         <div class="card-title"><h2>Asian Range</h2><span class="mercado">EUR/USD</span></div>
@@ -248,10 +212,10 @@ body{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;paddin
       </div>
       <div class="pos-row"><span class="pos-label">○ FLAT</span><span class="pos-none">Sin posicion</span></div>
       <div class="spark-wrap"><svg width="260" height="48" viewBox="0 0 260 48" preserveAspectRatio="none">
-      <defs><linearGradient id="g140398042835136" x1="0" y1="0" x2="0" y2="1">
+      <defs><linearGradient id="g139726462870400" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#ff5c6c" stop-opacity="0.25"/>
         <stop offset="100%" stop-color="#ff5c6c" stop-opacity="0"/></linearGradient></defs>
-      <path d="M0.0,30.6 L23.6,23.6 L47.3,10.0 L70.9,3.0 L94.5,4.7 L118.2,20.5 L141.8,25.7 L165.5,22.3 L189.1,13.7 L212.7,27.4 L236.4,43.3 L260.0,45.0 L260,48 L0,48 Z" fill="url(#g140398042835136)"/>
+      <path d="M0.0,30.6 L23.6,23.6 L47.3,10.0 L70.9,3.0 L94.5,4.7 L118.2,20.5 L141.8,25.7 L165.5,22.3 L189.1,13.7 L212.7,27.4 L236.4,43.3 L260.0,45.0 L260,48 L0,48 Z" fill="url(#g139726462870400)"/>
       <path d="M0.0,30.6 L23.6,23.6 L47.3,10.0 L70.9,3.0 L94.5,4.7 L118.2,20.5 L141.8,25.7 L165.5,22.3 L189.1,13.7 L212.7,27.4 L236.4,43.3 L260.0,45.0" fill="none" stroke="#ff5c6c" stroke-width="2" stroke-linejoin="round"/>
     </svg></div>
       <div class="metrics-grid">
@@ -272,10 +236,10 @@ body{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;paddin
       </div>
       <div class="pos-row"><span class="pos-label">○ FLAT</span><span class="pos-none">Sin posicion</span></div>
       <div class="spark-wrap"><svg width="260" height="48" viewBox="0 0 260 48" preserveAspectRatio="none">
-      <defs><linearGradient id="g140398042835328" x1="0" y1="0" x2="0" y2="1">
+      <defs><linearGradient id="g139726462872832" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#ff5c6c" stop-opacity="0.25"/>
         <stop offset="100%" stop-color="#ff5c6c" stop-opacity="0"/></linearGradient></defs>
-      <path d="M0.0,31.7 L28.9,17.0 L57.8,26.4 L86.7,35.4 L115.6,45.0 L144.4,3.0 L173.3,30.4 L202.2,43.7 L231.1,31.3 L260.0,37.8 L260,48 L0,48 Z" fill="url(#g140398042835328)"/>
+      <path d="M0.0,31.7 L28.9,17.0 L57.8,26.4 L86.7,35.4 L115.6,45.0 L144.4,3.0 L173.3,30.4 L202.2,43.7 L231.1,31.3 L260.0,37.8 L260,48 L0,48 Z" fill="url(#g139726462872832)"/>
       <path d="M0.0,31.7 L28.9,17.0 L57.8,26.4 L86.7,35.4 L115.6,45.0 L144.4,3.0 L173.3,30.4 L202.2,43.7 L231.1,31.3 L260.0,37.8" fill="none" stroke="#ff5c6c" stroke-width="2" stroke-linejoin="round"/>
     </svg></div>
       <div class="metrics-grid">
